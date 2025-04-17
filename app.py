@@ -18,6 +18,10 @@ def scrape_bbk():
     links = soup.find_all("a", href=True)
 
     total_links = len(links)
+
+    # Erstelle eine Platzhalteranzeige für den Fortschritt
+    progress_bar = st.empty()  # Platzhalter für den Fortschritt
+
     for i, link in enumerate(links):
         href = link["href"]
         title = link.get_text(strip=True)
@@ -52,9 +56,9 @@ def scrape_bbk():
         except Exception as e:
             st.error(f"Fehler bei Link {i+1}/{total_links}: {href}. Fehler: {str(e)}")
 
-        # Fortschrittsanzeige
+        # Fortschrittsanzeige aktualisieren
         progress = (i + 1) / total_links * 100
-        st.progress(progress)
+        progress_bar.progress(progress)
 
     return pd.DataFrame(relevante_ausschreibungen)
 
