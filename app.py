@@ -11,7 +11,6 @@ st.title("🎨 Kunst am Bau – Ausschreibungen Finder")
 URL = "https://www.bbk-bundesverband.de/ausschreibungen/aktuelle-ausschreibungen"
 KEYWORDS = ["kunst am bau", "kunst und bau", "künstlerische gestaltung"]
 
-@st.cache_data(show_spinner=True)
 def scrape_bbk():
     relevante_ausschreibungen = []
     response = requests.get(URL)
@@ -19,44 +18,43 @@ def scrape_bbk():
     links = soup.find_all("a", href=True)
 
     total_links = len(links)
-    with st.spinner(f"Durchsuche {total_links} Links..."):
-        for i, link in enumerate(links):
-            href = link["href"]
-            title = link.get_text(strip=True)
+    for i, link in enumerate(links):
+        href = link["href"]
+        title = link.get_text(strip=True)
 
-            if not href.startswith("http"):
-                href = "https://www.bbk-bundesverband.de" + href
+        if not href.startswith("http"):
+            href = "https://www.bbk-bundesverband.de" + href
 
-            try:
-                if ".pdf" in href:
-                    pdf_response = requests.get(href)
-                    pdf = fitz.open(stream=pdf_response.content, filetype="pdf")
-                    text = ""
-                    for page in pdf:
-                        text += page.get_text()
-                else:
-                    sub_resp = requests.get(href)
-                    sub_soup = BeautifulSoup(sub_resp.content, "html.parser")
-                    text = sub_soup.get_text()
+        try:
+            if ".pdf" in href:
+                pdf_response = requests.get(href)
+                pdf = fitz.open(stream=pdf_response.content, filetype="pdf")
+                text = ""
+                for page in pdf:
+                    text += page.get_text()
+            else:
+                sub_resp = requests.get(href)
+                sub_soup = BeautifulSoup(sub_resp.content, "html.parser")
+                text = sub_soup.get_text()
 
-                if any(kw in text.lower() for kw in KEYWORDS):
-                    deadline_match = re.search(r"(?i)(frist.*?[:\s\s]*)(\d{1,2}\.\d{1,2}\.\d{4})", text)
-                    ort_match = re.search(r"(?i)(ort[:\s]+)([A-ZÄÖÜa-zäöü\s\-]+)", text)
-                    frist = deadline_match.group(2) if deadline_match else "?"
-                    ort = ort_match.group(2).strip() if ort_match else "?"
+            if any(kw in text.lower() for kw in KEYWORDS):
+                deadline_match = re.search(r"(?i)(frist.*?[:\s\s]*)(\d{1,2}\.\d{1,2}\.\d{4})", text)
+                ort_match = re.search(r"(?i)(ort[:\s]+)([A-ZÄÖÜa-zäöü\s\-]+)", text)
+                frist = deadline_match.group(2) if deadline_match else "?"
+                ort = ort_match.group(2).strip() if ort_match else "?"
 
-                    relevante_ausschreibungen.append({
-                        "Titel": title,
-                        "Frist": frist,
-                        "Ort": ort,
-                        "Link": href
-                    })
-            except Exception as e:
-                st.error(f"Fehler bei Link {i+1}/{total_links}: {href}. Fehler: {str(e)}")
+                relevante_ausschreibungen.append({
+                    "Titel": title,
+                    "Frist": frist,
+                    "Ort": ort,
+                    "Link": href
+                })
+        except Exception as e:
+            st.error(f"Fehler bei Link {i+1}/{total_links}: {href}. Fehler: {str(e)}")
 
-            # Fortschrittsanzeige
-            progress = (i + 1) / total_links * 100
-            st.progress(progress)
+        # Fortschrittsanzeige
+        progress = (i + 1) / total_links * 100
+        st.progress(progress)
 
     return pd.DataFrame(relevante_ausschreibungen)
 
